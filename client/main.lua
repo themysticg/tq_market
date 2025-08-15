@@ -42,7 +42,7 @@ end
 -- ===== UI (ox_lib context) =====
 local function openMarket(shopId)
   lastOpenedShop = shopId
-  local catalog = lib.callback.await('tq_market_lib:getCatalog', false, shopId)
+  local catalog = lib.callback.await('tq_market:getCatalog', false, shopId)
   if not catalog then
     return lib.notify({ type='error', description=_T('ui_market_unavailable') })
   end
@@ -124,7 +124,7 @@ local function openMarket(shopId)
           onSelect = function()
             local input = lib.inputDialog(_T('dialog_buy_title', it.label), { { type='number', label=_T('dialog_amount'), min=1, default=1 } })
             if input and input[1] and input[1] > 0 then
-              TriggerServerEvent('tq_market_lib:buy', shopId, it.name, math.floor(input[1]))
+              TriggerServerEvent('tq_market:buy', shopId, it.name, math.floor(input[1]))
             end
           end
         },
@@ -133,7 +133,7 @@ local function openMarket(shopId)
           onSelect = function()
             local input = lib.inputDialog(_T('dialog_sell_title', it.label), { { type='number', label=_T('dialog_amount'), min=1, default=1 } })
             if input and input[1] and input[1] > 0 then
-              TriggerServerEvent('tq_market_lib:sell', shopId, it.name, math.floor(input[1]))
+              TriggerServerEvent('tq_market:sell', shopId, it.name, math.floor(input[1]))
             end
           end
         },
@@ -144,10 +144,10 @@ end
 
 -- public export + event for CUSTOM interaction
 exports('OpenMarket', openMarket)
-RegisterNetEvent('tq_market_lib:open', function(shopId) openMarket(shopId) end)
+RegisterNetEvent('tq_market:open', function(shopId) openMarket(shopId) end)
 
 -- refresh
-RegisterNetEvent('tq_market_lib:refresh', function(shopId)
+RegisterNetEvent('tq_market:refresh', function(shopId)
   if shopId then lastOpenedShop = shopId end
   if lastOpenedShop then openMarket(lastOpenedShop) end
 end)

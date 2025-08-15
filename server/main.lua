@@ -170,7 +170,7 @@ local function saveStateItem(shopId, itemName)
 end
 
 -- ================= Catalog for UI =================
-lib.callback.register('tq_market_lib:getCatalog', function(src, shopId)
+lib.callback.register('tq_market:getCatalog', function(src, shopId)
   local shop = Config.Shops[shopId]
   if not shop then return nil end
   ensureShopTables(shopId)
@@ -212,7 +212,7 @@ end)
 
 
 -- ================= Sell (player -> shop) =================
-RegisterNetEvent('tq_market_lib:sell', function(shopId, itemName, amount)
+RegisterNetEvent('tq_market:sell', function(shopId, itemName, amount)
   local src = source
   local shop = Config.Shops[shopId]
   if not shop then return end
@@ -242,11 +242,11 @@ RegisterNetEvent('tq_market_lib:sell', function(shopId, itemName, amount)
 
   TriggerClientEvent('ox_lib:notify', src, { type='success', description = _T('notify_sold_line', qty, shop.items[itemName].label, payout) })
 
-  TriggerClientEvent('tq_market_lib:refresh', src, shopId)
+  TriggerClientEvent('tq_market:refresh', src, shopId)
 end)
 
 -- ================= Buy (shop -> player) =================
-RegisterNetEvent('tq_market_lib:buy', function(shopId, itemName, amount)
+RegisterNetEvent('tq_market:buy', function(shopId, itemName, amount)
   local src = source
   local shop = Config.Shops[shopId]
   if not shop then return end
@@ -287,7 +287,7 @@ RegisterNetEvent('tq_market_lib:buy', function(shopId, itemName, amount)
 
   TriggerClientEvent('ox_lib:notify', src, { type='success', description = _T('notify_bought_line', qty, shop.items[itemName].label, cost) })
 
-  TriggerClientEvent('tq_market_lib:refresh', src, shopId)
+  TriggerClientEvent('tq_market:refresh', src, shopId)
 end)
 
 -- ================= Init =================
