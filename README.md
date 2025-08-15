@@ -1,4 +1,4 @@
-# tq\_market\_lib — Player-Driven Dynamic Market (ox\_lib UI • Qbox • ox\_inventory)
+# tq\_market — Player-Driven Dynamic Market (ox\_lib UI • Qbox • ox\_inventory)
 
 > **Author’s Note**
 > This is the first script I’ve ever made. All the ideas, design decisions, and gameplay vision are mine. AI was used to help structure code, tighten logic, and correct small mistakes — not to invent features. 🙏
