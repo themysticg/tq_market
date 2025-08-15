@@ -271,14 +271,22 @@ RegisterNetEvent('tq_market:buy', function(shopId, itemName, amount)
     return false
   end
 
-  local paid = tryCharge(shop.chargeFirst, cost) or tryCharge(shop.chargeSecond, cost)
-  if not paid then
+  local Player = exports.qbx_core:GetPlayer(src); if not Player then return end
+  local paidAccount
+  if tryCharge(shop.chargeFirst, cost) then
+    paidAccount = shop.chargeFirst
+  elseif tryCharge(shop.chargeSecond, cost) then
+    paidAccount = shop.chargeSecond
+  else
     return TriggerClientEvent('ox_lib:notify', src, { type='error', description=_T('notify_not_enough_funds') })
   end
 
   if not INV:AddItem(src, itemName, qty) then
-    -- refund to first account
-    Player.Functions.AddMoney(shop.chargeFirst or 'cash', cost, ('%s-buy-refund'):format(shopId))
+    if paidAccount then
+      Player.Functions.AddMoney(paidAccount, cost, ('%s-buy-refund'):format(shopId))
+    else
+      Player.Functions.AddMoney(shop.chargeFirst or 'cash', cost, ('%s-buy-refund'):format(shopId))
+    end
     return TriggerClientEvent('ox_lib:notify', src, { type='error', description=_T('notify_could_not_add') })
   end
 
