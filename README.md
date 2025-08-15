@@ -295,7 +295,7 @@ Add new languages by creating `locales/<lang>.lua` and registering `Locales['<la
 
 ## 🙌 Credits
 
-* **Concept, design, and code ownership:** me.
+* **Concept, design, and code ownership:** me. and i got ideas from @FraserChambers
 * **Assistance:** AI was used to help with refactors, docs, and small bug fixes.
 
 > If you use this in your own servers and like it, star the repo and drop feedback. I’m always down to iterate. 💚
