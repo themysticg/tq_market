@@ -7,7 +7,7 @@
 
 ## ✨ What it does
 
-`tq_market_lib` creates **player-driven shops** with **live supply & demand pricing**. Players **sell** items to NPC shops (stock goes up → price goes down) and **buy** items back (stock goes down → price goes up). It supports **multiple shops**, **categories** (Ingredients, Materials, Electronics, etc.), **nightly decay/spoilage**, **scheduled sales events** with global announcements, and **trend arrows** showing price movement over time.
+`tq_market` creates **player-driven shops** with **live supply & demand pricing**. Players **sell** items to NPC shops (stock goes up → price goes down) and **buy** items back (stock goes down → price goes up). It supports **multiple shops**, **categories** (Ingredients, Materials, Electronics, etc.), **nightly decay/spoilage**, **scheduled sales events** with global announcements, and **trend arrows** showing price movement over time.
 
 * UI built with **ox\_lib** (no ox\_inventory shop UI).
 * Items are still stored/managed by **ox\_inventory** (add/remove/check).
@@ -46,7 +46,7 @@
 ## 📁 File Tree (trimmed)
 
 ```
-tq_market_lib/
+tq_market/
   ├─ fxmanifest.lua
   ├─ config.lua
   ├─ shared/
@@ -66,7 +66,7 @@ tq_market_lib/
 
 ## ⚙️ Install
 
-1. Drop `tq_market_lib` into `resources/`.
+1. Drop `tq_market` into `resources/`.
 2. If using MySQL:
 
    ```sql
@@ -84,7 +84,7 @@ tq_market_lib/
    ensure ox_lib
    ensure ox_inventory
    ensure oxmysql
-   ensure tq_market_lib
+   ensure tq_market
    ```
 4. Make sure every item you sell/buy exists in **ox\_inventory** items config (labels, weights, etc.).
 5. (Optional) Put custom item images in `web/images/` and reference them in `Config.Shops[...].items[name].image`.
@@ -221,26 +221,26 @@ Config.Trend = {
 
 ```lua
 -- Event
-TriggerEvent('tq_market_lib:open', 'ingredients')
+TriggerEvent('tq_market:open', 'ingredients')
 
 -- Export
-exports['tq_market_lib']:OpenMarket('ingredients')
+exports['tq_market']:OpenMarket('ingredients')
 ```
 
 **Server events (client → server):**
 
 ```lua
 -- Buy from a shop
-TriggerServerEvent('tq_market_lib:buy',  shopId, itemName, amount)
+TriggerServerEvent('tq_market:buy',  shopId, itemName, amount)
 
 -- Sell to a shop
-TriggerServerEvent('tq_market_lib:sell', shopId, itemName, amount)
+TriggerServerEvent('tq_market:sell', shopId, itemName, amount)
 ```
 
 **Callback (client → server via ox\_lib):**
 
 ```lua
-local catalog = lib.callback.await('tq_market_lib:getCatalog', false, shopId)
+local catalog = lib.callback.await('tq_market:getCatalog', false, shopId)
 -- returns { shopId, shopName, categories, items = [...] }
 ```
 
@@ -304,7 +304,7 @@ Add new languages by creating `locales/<lang>.lua` and registering `Locales['<la
 
 ## 📜 License
 
-tq_market_lib Non-Commercial License v1.0
+tq_market Non-Commercial License v1.0
 Copyright (c) 2025 Jose Garrido (TheMysticG). All rights reserved.
 
 Permission is granted to use and modify this software on your own FiveM/RedM servers and to create private forks for the purpose of contributing fixes or improvements back to the original repository.
