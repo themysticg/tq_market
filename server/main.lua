@@ -337,7 +337,7 @@ local function doNightlyDecay()
       local catList = {}
       for k,_ in pairs(touchedCats) do table.insert(catList, shop.categories[k] or k) end
       TriggerClientEvent('ox_lib:notify', -1, {
-        type = 'info',
+        type = 'inform',
         description = _T('decay_broadcast', shop.name .. ' (' .. table.concat(catList, ', ') .. ')')
       })
     end
