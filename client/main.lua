@@ -3,6 +3,13 @@ local mode = (Config.Interaction and Config.Interaction.mode) or 'ox_lib'
 local lastOpenedShop = nil
 
 -- ===== Utils
+local function getItemCount(name)
+  local ok, count = pcall(function()
+    return exports.ox_inventory:Search('count', name)
+  end)
+  return (ok and count) or 0
+end
+
 local function toVec3(v)
   if type(v) == 'vector3' then return v end
   if type(v) == 'vector4' then return vec3(v.x, v.y, v.z) end
@@ -42,7 +49,7 @@ end
 -- ===== UI (ox_lib context) =====
 local function openMarket(shopId)
   lastOpenedShop = shopId
-  local catalog = lib.callback.await('tq_market:getCatalog', false, shopId)
+  local catalog = lib.callback.await('tq_market_lib:getCatalog', false, shopId)
   if not catalog then
     return lib.notify({ type='error', description=_T('ui_market_unavailable') })
   end
@@ -77,12 +84,18 @@ local function openMarket(shopId)
   lib.showContext(rootId)
 
   local function makeItemOption(it)
+    -- NEW: check what the player owns (guarded by Config.UI.highlightOwned)
+    local have  = (Config.UI and Config.UI.highlightOwned) and getItemCount(it.name) or 0
+    local owned = have > 0
+
     local title = it.label
     if it.onSale and it.discount and it.discount > 0 then
       title = ("%s  [%s]"):format(title, _T('sale_badge', it.discount))
     end
+    -- NEW: prepend a green dot if owned
+    if owned then title = "🟢 " .. title end
 
-    -- Show both 1h and 24h arrows (compact)
+    -- compact trend arrows (kept from your original)
     local buyLine  = ("$%d %s/%s"):format(it.buyPrice, arrow(it.buyDelta1h or 0), arrow(it.buyDelta24h or 0))
     local sellLine = ("$%d %s/%s"):format(it.sellPrice, arrow(it.sellDelta1h or 0), arrow(it.sellDelta24h or 0))
 
@@ -92,10 +105,14 @@ local function openMarket(shopId)
                     .. ("  |  B:%s  S:%s"):format(buyLine, sellLine),
       image = it.image,
       menu  = ('tq_market_item_%s_%s'):format(shopId, it.name),
-      args  = it
+      args  = it,
+
+      -- NEW: right-side count and a check icon if you own it
+      right    = owned and ('x' .. have) or nil,
+      icon     = owned and 'fa-solid fa-circle-check' or nil,
+      iconColor= owned and '#22c55e' or nil, -- ox_lib will ignore if not supported
     }
   end
-
 
   local function registerCatMenu(catKey, list)
     local opts = {}
@@ -124,16 +141,34 @@ local function openMarket(shopId)
           onSelect = function()
             local input = lib.inputDialog(_T('dialog_buy_title', it.label), { { type='number', label=_T('dialog_amount'), min=1, default=1 } })
             if input and input[1] and input[1] > 0 then
-              TriggerServerEvent('tq_market:buy', shopId, it.name, math.floor(input[1]))
+              TriggerServerEvent('tq_market_lib:buy', shopId, it.name, math.floor(input[1]))
             end
           end
         },
         {
           title = _T('menu_sell_now', it.sellPrice),
           onSelect = function()
-            local input = lib.inputDialog(_T('dialog_sell_title', it.label), { { type='number', label=_T('dialog_amount'), min=1, default=1 } })
+            -- 1) quantos o jogador tem
+            local have = getItemCount(it.name)
+            if have < 1 then
+              return lib.notify({ type='error', description=_T('notify_not_enough_items') })
+            end
+          
+            -- 2) vender já tudo? (toggle)
+            if Config.UI.sellMaxInstant then
+              TriggerServerEvent('tq_market_lib:sell', shopId, it.name, have)
+              SetTimeout(250, function() openMarket(shopId) end)
+              return
+            end
+          
+            -- 3) abrir input com DEFAULT = máximo (toggle)
+            local defaultQty = (Config.UI.sellPrefillMax and have) or 1
+            local input = lib.inputDialog(_T('dialog_sell_title', it.label), {
+              { type='number', label=_T('dialog_amount'), min=1, max=have, default=defaultQty, step=1, required=true }
+            })
             if input and input[1] and input[1] > 0 then
-              TriggerServerEvent('tq_market:sell', shopId, it.name, math.floor(input[1]))
+              TriggerServerEvent('tq_market_lib:sell', shopId, it.name, math.floor(input[1]))
+              SetTimeout(250, function() openMarket(shopId) end)
             end
           end
         },
@@ -144,10 +179,10 @@ end
 
 -- public export + event for CUSTOM interaction
 exports('OpenMarket', openMarket)
-RegisterNetEvent('tq_market:open', function(shopId) openMarket(shopId) end)
+RegisterNetEvent('tq_market_lib:open', function(shopId) openMarket(shopId) end)
 
 -- refresh
-RegisterNetEvent('tq_market:refresh', function(shopId)
+RegisterNetEvent('tq_market_lib:refresh', function(shopId)
   if shopId then lastOpenedShop = shopId end
   if lastOpenedShop then openMarket(lastOpenedShop) end
 end)

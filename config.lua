@@ -8,6 +8,22 @@ Config.Images = {
   useOxInventoryImages = true, -- uses: nui://ox_inventory/web/images/<item>.png
 }
 
+Config.UpdateCheck = {
+  enabled = true,
+  url = 'https://raw.githubusercontent.com/themysticg/tq_market/main/version.json' -- raw JSON URL
+}
+
+Config.UI = Config.UI or {}
+
+-- Mostra o ponto verde e "xN" nos itens possuídos (já tinhas pedido isto)
+Config.UI.highlightOwned   = true
+
+-- NOVO: ao vender, preencher o input com o MÁXIMO que o jogador tem
+Config.UI.sellPrefillMax   = true
+
+-- Opcional: vender imediatamente o máximo (sem abrir input)
+Config.UI.sellMaxInstant   = false
+
 -- Interaction provider:
 -- 'ox_target' = use ox_target on peds; 'ox_lib' = proximity + TextUI; 'custom' = do nothing (you integrate)
 Config.Interaction = {
@@ -177,17 +193,36 @@ Config.Shops = {
     payAccount    = 'cash',
     chargeFirst   = 'cash',
     chargeSecond  = 'bank',
-    locations = { vec3(-315.0, -1545.5, 27.5) },
-    peds = { { model = `s_m_y_construct_02`, coords = vec4(-316.0, -1544.7, 27.5, 115.0) } },
+    locations = { vec3(1987.39, 3825.13, 32.51) },
+    peds = { { model = `s_m_y_construct_02`, coords = vec4(1987.39, 3825.13, 32.51, 117) } },
     categories = {
       raw      = 'Raw',
       refined  = 'Refined',
     },
     items = {
-      iron_ore   = { label='Iron Ore',    category='raw',     capStock=1500, sellAtZero=45, sellAtCap=12 },
-      copper_ore = { label='Copper Ore',  category='raw',     capStock=1500, sellAtZero=35, sellAtCap=10 },
-      steel_bar  = { label='Steel Bar',   category='refined', capStock=600,  sellAtZero=90, sellAtCap=35 },
-      wire_spool = { label='Wire Spool',  category='refined', capStock=700,  sellAtZero=70, sellAtCap=28 },
+      ring_diamond      = { label='Anel de Diamante',      category='refined', capStock=100, sellAtZero=330, sellAtCap=220 },
+      necklace_diamond  = { label='Colar de Diamante',     category='refined', capStock=100, sellAtZero=352, sellAtCap=242 },
+      ring_ruby         = { label='Anel de Rubi',          category='refined', capStock=100, sellAtZero=237, sellAtCap=193 },
+      ring_emerald      = { label='Anel de Esmeralda',     category='refined', capStock=100, sellAtZero=165, sellAtCap=138 },
+      ring_aquamarine   = { label='Anel de Água-marinha',  category='refined', capStock=100, sellAtZero=110, sellAtCap=88 },
+      ring_gold         = { label='Anel de Ouro',          category='refined', capStock=100, sellAtZero=88,  sellAtCap=66 },
+      aquamarine        = { label='Água-marinha',          category='refined', capStock=100, sellAtZero=83,  sellAtCap=66 },
+      diamond           = { label='Diamante',              category='refined', capStock=100, sellAtZero=83,  sellAtCap=66 },
+      ruby              = { label='Rubi',                  category='refined', capStock=100, sellAtZero=83,  sellAtCap=66 },
+      emerald           = { label='Esmeralda',             category='refined', capStock=100, sellAtZero=83,  sellAtCap=66 },
+      earring_gold      = { label='Brinco de Ouro',        category='refined', capStock=100, sellAtZero=77,  sellAtCap=55 },
+      necklace_gold     = { label='Colar de Ouro',         category='refined', capStock=100, sellAtZero=99,  sellAtCap=77 },
+      ring_silver       = { label='Anel de Prata',         category='refined', capStock=100, sellAtZero=50,  sellAtCap=33 },
+      earring_silver    = { label='Brinco de Prata',       category='refined', capStock=100, sellAtZero=44,  sellAtCap=28 },
+      necklace_silver   = { label='Colar de Prata',        category='refined', capStock=100, sellAtZero=55,  sellAtCap=39 },
+      rubber            = { label='Borracha',              category='raw',     capStock=500, sellAtZero=11,  sellAtCap=6 },
+      steel             = { label='Aço',                   category='refined', capStock=500, sellAtZero=15,  sellAtCap=9 },
+      aluminium         = { label='Alumínio',              category='refined', capStock=500, sellAtZero=13,  sellAtCap=8 },
+      plastic           = { label='Plástico',              category='raw',     capStock=500, sellAtZero=11,  sellAtCap=7 },
+      metalscrap        = { label='Sucata de Metal',       category='raw',     capStock=500, sellAtZero=11,  sellAtCap=6 },
+      gunpowder         = { label='Pólvora',               category='refined', capStock=300, sellAtZero=18,  sellAtCap=11 },
+      kevlar            = { label='Kevlar',                category='refined', capStock=200, sellAtZero=28,  sellAtCap=17 },
+      copper            = { label='Cobre',                 category='refined', capStock=500, sellAtZero=15,  sellAtCap=9 },
     }
   },
 
@@ -198,17 +233,15 @@ Config.Shops = {
     payAccount    = 'cash',
     chargeFirst   = 'cash',
     chargeSecond  = 'bank',
-    locations = { vec3(-657.2, -857.1, 24.5) },
-    peds = { { model = `ig_ramp_mex`, coords = vec4(-657.7, -858.0, 24.5, 90.0) } },
+    locations = { vec3(1934.98, 3821.06, 32.47) },
+    peds = { { model = `ig_ramp_mex`, coords = vec4(1934.98, 3821.06, 32.47, 304) } },
     categories = {
       parts = 'Components',
       devices = 'Devices',
     },
     items = {
-      circuit = { label='Circuit Board', category='parts',   capStock=800,  sellAtZero=120, sellAtCap=40 },
-      chip    = { label='Microchip',     category='parts',   capStock=700,  sellAtZero=160, sellAtCap=55 },
-      phone   = { label='Smartphone',    category='devices', capStock=300,  sellAtZero=450, sellAtCap=180 },
-      radio   = { label='Handheld Radio',category='devices', capStock=400,  sellAtZero=260, sellAtCap=110 },
+      electronics = { label='Partes Eletronicas',     category='parts',   capStock=800,  sellAtZero=30, sellAtCap=18 },
+      copper_wire    = { label='Fio de cobre',   category='parts',   capStock=700,  sellAtZero=25, sellAtCap= 15},
     }
   },
 }

@@ -2,7 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 
-name 'tq_market'
+name 'tq_market_lib'
 author 'Mystic + ChatGPT'
 version '1.3.0'
 description 'Multi-shop dynamic market (ox_lib UI + ox_inventory backend) with locales and pluggable interaction'

@@ -170,7 +170,7 @@ local function saveStateItem(shopId, itemName)
 end
 
 -- ================= Catalog for UI =================
-lib.callback.register('tq_market:getCatalog', function(src, shopId)
+lib.callback.register('tq_market_lib:getCatalog', function(src, shopId)
   local shop = Config.Shops[shopId]
   if not shop then return nil end
   ensureShopTables(shopId)
@@ -212,7 +212,7 @@ end)
 
 
 -- ================= Sell (player -> shop) =================
-RegisterNetEvent('tq_market:sell', function(shopId, itemName, amount)
+RegisterNetEvent('tq_market_lib:sell', function(shopId, itemName, amount)
   local src = source
   local shop = Config.Shops[shopId]
   if not shop then return end
@@ -240,13 +240,26 @@ RegisterNetEvent('tq_market:sell', function(shopId, itemName, amount)
   State[shopId][itemName].stock = before + qty
   saveStateItem(shopId, itemName)
 
+  -- Log to server console
+  print(('[MARKET][SELL] Player %s sold %dx %s to shop %s for $%d'):format(src, qty, itemName, shopId, payout))
+
+  -- Discord log
+  if GetConvar('dev_environment', 'true') == 'false' then
+    local webhookKey = "market_sell"
+    local title = "Item Sold"
+    local description = ("Player **%s (%s)** sold **%sx %s** to shop **%s** for **$%d**")
+      :format(Player.PlayerData.name or src, Player.PlayerData.citizenid or "N/A", qty, itemName, shopId, payout)
+    local color = 65280 -- Green
+    exports["3q-system"]:addLog(webhookKey, title, description, color)
+  end
+
   TriggerClientEvent('ox_lib:notify', src, { type='success', description = _T('notify_sold_line', qty, shop.items[itemName].label, payout) })
 
-  TriggerClientEvent('tq_market:refresh', src, shopId)
+  TriggerClientEvent('tq_market_lib:refresh', src, shopId)
 end)
 
 -- ================= Buy (shop -> player) =================
-RegisterNetEvent('tq_market:buy', function(shopId, itemName, amount)
+RegisterNetEvent('tq_market_lib:buy', function(shopId, itemName, amount)
   local src = source
   local shop = Config.Shops[shopId]
   if not shop then return end
@@ -271,7 +284,6 @@ RegisterNetEvent('tq_market:buy', function(shopId, itemName, amount)
     return false
   end
 
-  local Player = exports.qbx_core:GetPlayer(src); if not Player then return end
   local paidAccount
   if tryCharge(shop.chargeFirst, cost) then
     paidAccount = shop.chargeFirst
@@ -293,9 +305,22 @@ RegisterNetEvent('tq_market:buy', function(shopId, itemName, amount)
   State[shopId][itemName].stock = before - qty
   saveStateItem(shopId, itemName)
 
+  -- Log to server console
+  print(('[MARKET][BUY] Player %s bought %dx %s from shop %s for $%d'):format(src, qty, itemName, shopId, cost))
+
+  -- Discord log
+  if GetConvar('dev_environment', 'true') == 'false' then
+    local webhookKey = "market_buy"
+    local title = "Item Bought"
+    local description = ("Player **%s (%s)** bought **%sx %s** from shop **%s** for **$%d**")
+      :format(Player.PlayerData.name or src, Player.PlayerData.citizenid or "N/A", qty, itemName, shopId, cost)
+    local color = 16776960 -- Yellow
+    exports["3q-system"]:addLog(webhookKey, title, description, color)
+  end
+
   TriggerClientEvent('ox_lib:notify', src, { type='success', description = _T('notify_bought_line', qty, shop.items[itemName].label, cost) })
 
-  TriggerClientEvent('tq_market:refresh', src, shopId)
+  TriggerClientEvent('tq_market_lib:refresh', src, shopId)
 end)
 
 -- ================= Init =================
@@ -337,7 +362,7 @@ local function doNightlyDecay()
       local catList = {}
       for k,_ in pairs(touchedCats) do table.insert(catList, shop.categories[k] or k) end
       TriggerClientEvent('ox_lib:notify', -1, {
-        type = 'inform',
+        type = 'info',
         description = _T('decay_broadcast', shop.name .. ' (' .. table.concat(catList, ', ') .. ')')
       })
     end
@@ -433,3 +458,48 @@ CreateThread(function()
     Wait(every * 1000)
   end
 end)
+
+-- === Public Exports ===
+exports('GetStock', function(shopId, item) 
+  ensureShopTables(shopId); return (State[shopId][item] and State[shopId][item].stock) or 0 
+end)
+
+exports('SetStock', function(shopId, item, value)
+  ensureShopTables(shopId); if not Config.Shops[shopId] or not Config.Shops[shopId].items[item] then return false end
+  State[shopId][item].stock = math.max(0, tonumber(value) or 0); saveStateItem(shopId, item); return true
+end)
+
+exports('AddStock', function(shopId, item, delta)
+  ensureShopTables(shopId); if not Config.Shops[shopId] or not Config.Shops[shopId].items[item] then return false end
+  local cur = (State[shopId][item] and State[shopId][item].stock) or 0
+  State[shopId][item].stock = math.max(0, cur + math.floor(delta or 0)); saveStateItem(shopId, item); return true
+end)
+
+exports('GetPrices', function(shopId, item)
+  ensureShopTables(shopId); local s = (State[shopId][item] and State[shopId][item].stock) or 0
+  local sell = unitSellPrice(shopId, item, s); local buy = unitBuyPriceCurrent(shopId, item, sell)
+  return { sell = sell, buy = buy, stock = s }
+end)
+
+-- === Simple admin commands (ACE protect these) ===
+--[[ RegisterCommand('market.setstock', function(src, args)
+  local shop,item,val = args[1], args[2], tonumber(args[3] or 0)
+  if not shop or not item or not val then return end
+  if exports['ox_lib']:checkPlayerAce(src, 'market.admin') then
+    if exports[GetCurrentResourceName()]:SetStock(shop, item, val) then
+      TriggerClientEvent('ox_lib:notify', src, {type='success', description=('Set %s/%s stock to %d'):format(shop,item,val) })
+      TriggerClientEvent('tq_market_lib:refresh', src, shop)
+    end
+  end
+end, false)
+
+RegisterCommand('market.addstock', function(src, args)
+  local shop,item,delta = args[1], args[2], tonumber(args[3] or 0)
+  if not shop or not item or not delta then return end
+  if exports['ox_lib']:checkPlayerAce(src, 'market.admin') then
+    if exports[GetCurrentResourceName()]:AddStock(shop, item, delta) then
+      TriggerClientEvent('ox_lib:notify', src, {type='success', description=('Added %d to %s/%s'):format(delta,shop,item) })
+      TriggerClientEvent('tq_market_lib:refresh', src, shop)
+    end
+  end
+end, false) ]]
