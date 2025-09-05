@@ -4,11 +4,12 @@ lua54 'yes'
 
 name 'tq_market_lib'
 author 'Mystic + ChatGPT'
-version '1.3.0'
+version '1.3.1'
 description 'Multi-shop dynamic market (ox_lib UI + ox_inventory backend) with locales and pluggable interaction'
 
 shared_scripts {
   '@ox_lib/init.lua',
+  --'@lation_ui/init.lua',
   'shared/locale.lua',        -- NEW
   'locales/en.lua',           -- NEW
   'locales/pt.lua',           -- NEW (pt-PT sample)

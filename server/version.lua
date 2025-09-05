@@ -1,4 +1,4 @@
--- =========================
+--[[ -- =========================
 -- One-time Update Checker
 -- =========================
 
@@ -56,3 +56,4 @@ AddEventHandler('onResourceStart', function(resName)
         checkForUpdateOnce()
     end)
 end)
+ ]]

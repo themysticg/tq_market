@@ -170,44 +170,60 @@ local function saveStateItem(shopId, itemName)
 end
 
 -- ================= Catalog for UI =================
+-- ================= Catalog for UI =================
 lib.callback.register('tq_market_lib:getCatalog', function(src, shopId)
   local shop = Config.Shops[shopId]
-  if not shop then return nil end
+  if not shop then
+    print(('[tq_market] getCatalog: invalid shopId "%s" from %s'):format(tostring(shopId), tostring(src)))
+    return { shopId = shopId, shopName = 'Unknown', categories = {}, items = {} }
+  end
+
   ensureShopTables(shopId)
+  -- make sure all configured items exist in state
+  for name,_ in pairs(shop.items or {}) do
+    State[shopId][name] = State[shopId][name] or { stock = 0 }
+  end
 
   local list = {}
-  for name, data in pairs(State[shopId]) do
+  for name, def in pairs(shop.items or {}) do
+    local data = State[shopId][name] or { stock = 0 }
+
     local sell = unitSellPrice(shopId, name, data.stock)
     local buy  = unitBuyPriceCurrent(shopId, name, sell)
     local disc = getActiveDiscount(shopId, name)
-    local sale = (disc > 0)
+    local onSale = disc > 0
+    local cat = def.category
 
-    -- trends
+    -- trends (safe)
     local h1 = findPriceAt(shopId, name, Config.Trend.lookback1h or 3600)
     local d1 = findPriceAt(shopId, name, Config.Trend.lookback24h or 86400)
-    local buyDelta1h  = h1 and (buy - h1.buy) or 0
-    local sellDelta1h = h1 and (sell - h1.sell) or 0
-    local buyDelta24h  = d1 and (buy - d1.buy) or 0
+    local buyDelta1h   = h1 and (buy  - h1.buy)  or 0
+    local sellDelta1h  = h1 and (sell - h1.sell) or 0
+    local buyDelta24h  = d1 and (buy  - d1.buy)  or 0
     local sellDelta24h = d1 and (sell - d1.sell) or 0
 
     list[#list+1] = {
-      name      = name,
-      label     = shop.items[name].label,
-      category  = shop.items[name].category,
-      stock     = data.stock,
-      sellPrice = sell,
-      buyPrice  = buy,
-      image     = resolveImage(shopId, name),
-      onSale    = sale,
-      discount  = sale and math.floor(disc * 100) or 0,
-      saleEnds  = (ActiveSales[shopId][getCategory(shopId, name)] or {}).endsAt,
-
+      name       = name,
+      label      = def.label or name,
+      category   = cat,
+      stock      = data.stock,
+      sellPrice  = sell,
+      buyPrice   = buy,
+      image      = resolveImage(shopId, name),
+      onSale     = onSale,
+      discount   = onSale and math.floor(disc * 100) or 0,
+      saleEnds   = (ActiveSales[shopId] and ActiveSales[shopId][cat] or {}).endsAt,
       buyDelta1h = buyDelta1h,   sellDelta1h = sellDelta1h,
       buyDelta24h = buyDelta24h, sellDelta24h = sellDelta24h,
     }
   end
 
-  return { shopId = shopId, shopName = shop.name, categories = shop.categories or {}, items = list }
+  return {
+    shopId = shopId,
+    shopName = shop.name,
+    categories = shop.categories or {},
+    items = list
+  }
 end)
 
 
@@ -329,15 +345,21 @@ AddEventHandler('onResourceStart', function(res)
   for id,_ in pairs(Config.Shops) do loadShop(id) end
 end)
 
-local function secondsUntil(hour, minute)
+local function secondsUntilNextTimeOfDay(times)
   local now = os.date('*t')
-  local run = { year=now.year, month=now.month, day=now.day, hour=hour, min=minute, sec=0, isdst=now.isdst }
-  local tRun = os.time(run)
-  if tRun <= os.time() then
-    run.day = run.day + 1
-    tRun = os.time(run)
+  local nowTs = os.time(now)
+  local best = math.huge
+  for _,t in ipairs(times or {}) do
+    local run = {
+      year = now.year, month = now.month, day = now.day,
+      hour = t.hour or 0, min = t.minute or 0, sec = 0, isdst = now.isdst
+    }
+    local ts = os.time(run)
+    if ts <= nowTs then ts = ts + 86400 end -- move to tomorrow
+    local diff = ts - nowTs
+    if diff < best then best = diff end
   end
-  return tRun - os.time()
+  return best
 end
 
 local function doNightlyDecay()
@@ -359,21 +381,82 @@ local function doNightlyDecay()
       end
     end
     if Config.Decay.announce and next(touchedCats) then
+        local catList = {}
+        for k,_ in pairs(touchedCats) do
+            table.insert(catList, (shop.categories and shop.categories[k]) or k)
+        end
+        TriggerClientEvent('ox_lib:notify', -1, {
+            type = 'inform',  -- 'inform' is the ox_lib type
+            description = _T('decay_broadcast', shop.name, table.concat(catList, ', ')),
+            duration = 10000
+        })
+    end
+  end
+end
+
+-- Apply a decay run using a provided category map
+local function runDecay(categoriesMap, announceFlag)
+  if not categoriesMap then return end
+  for shopId, shop in pairs(Config.Shops) do
+    ensureShopTables(shopId)
+    local touchedCats = {}
+    for itemName, entry in pairs(State[shopId]) do
+      local cat = getCategory(shopId, itemName)
+      local rule = cat and categoriesMap[cat]
+      if rule and entry.stock > 0 then
+        local remove = math.floor(entry.stock * (rule.percent or 0))
+        local newStock = math.max(entry.stock - remove, rule.minLeft or 0)
+        if newStock ~= entry.stock then
+          State[shopId][itemName].stock = newStock
+          saveStateItem(shopId, itemName)
+          touchedCats[cat] = true
+        end
+      end
+    end
+    local shouldAnnounce = (announceFlag ~= nil) and announceFlag or (Config.Decay and Config.Decay.announce)
+    if shouldAnnounce and next(touchedCats) then
       local catList = {}
-      for k,_ in pairs(touchedCats) do table.insert(catList, shop.categories[k] or k) end
+      for k,_ in pairs(touchedCats) do
+        table.insert(catList, (shop.categories and shop.categories[k]) or k)
+      end
       TriggerClientEvent('ox_lib:notify', -1, {
-        type = 'info',
-        description = _T('decay_broadcast', shop.name .. ' (' .. table.concat(catList, ', ') .. ')')
+        type = 'inform',
+        description = _T('decay_broadcast', shop.name, table.concat(catList, ', ')),
+        duration = 10000
       })
     end
   end
 end
 
+-- Multi-schedule decay (per-time, per-category); falls back to single-time config if no schedules are set
 CreateThread(function()
-  if Config.Decay and Config.Decay.enabled then
+  if not (Config.Decay and Config.Decay.enabled) then return end
+
+  local schedules = Config.Decay.schedules
+  if schedules and #schedules > 0 then
+    -- Start one tiny scheduler per schedule
+    for _,sch in ipairs(schedules) do
+      CreateThread(function()
+        local times = sch.times or {}
+        while true do
+          local wait = secondsUntilNextTimeOfDay(times)
+          Wait((wait + 1) * 1000)
+          runDecay(sch.categories, sch.announce)
+        end
+      end)
+    end
+  else
+    -- Backward compatibility: use your existing once-a-day categories
+    local function secondsUntil(h, m)
+      local now = os.date('*t')
+      local run = { year=now.year, month=now.month, day=now.day, hour=h or 4, min=m or 0, sec=0, isdst=now.isdst }
+      local ts = os.time(run); if ts <= os.time() then ts = ts + 86400 end
+      return ts - os.time()
+    end
     while true do
       local wait = secondsUntil(Config.Decay.hour or 4, Config.Decay.minute or 0)
       Wait((wait + 1) * 1000)
+      -- Use the same logic as before
       doNightlyDecay()
     end
   end

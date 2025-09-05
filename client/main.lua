@@ -148,21 +148,22 @@ local function openMarket(shopId)
         {
           title = _T('menu_sell_now', it.sellPrice),
           onSelect = function()
-            -- 1) quantos o jogador tem
             local have = getItemCount(it.name)
             if have < 1 then
               return lib.notify({ type='error', description=_T('notify_not_enough_items') })
             end
           
-            -- 2) vender já tudo? (toggle)
-            if Config.UI.sellMaxInstant then
+            local UI = Config.UI or {}
+          
+            -- instant sell?
+            if UI.sellMaxInstant then
               TriggerServerEvent('tq_market_lib:sell', shopId, it.name, have)
               SetTimeout(250, function() openMarket(shopId) end)
               return
             end
           
-            -- 3) abrir input com DEFAULT = máximo (toggle)
-            local defaultQty = (Config.UI.sellPrefillMax and have) or 1
+            -- prefill with max?
+            local defaultQty = (UI.sellPrefillMax and have) or 1
             local input = lib.inputDialog(_T('dialog_sell_title', it.label), {
               { type='number', label=_T('dialog_amount'), min=1, max=have, default=defaultQty, step=1, required=true }
             })
